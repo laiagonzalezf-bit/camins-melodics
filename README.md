@@ -4,7 +4,7 @@
 
 Joc d'escolta i creació per treballar l'harmonia i la melodia amb graus. Cada columna és un acord; es tria un camí (una o dues notes per acord) i se sent sobre la progressió. Inclou mode demostració per nivells, joc d'endevinar el camí, progressions de pop, menor i jazz (Real Book), mesclador i colors dels graus a l'estil de Hooktheory.
 
-Creat per Laia González Fernández per a l'assignatura Didàctica del llenguatge i l'expressió musical II (ESMUC). Idea adaptada d'un exercici de «melody paths».
+Creat per Laia González Fernández. Idea adaptada d'un exercici de «melody paths».
 
 ## Com fer-la servir
 
