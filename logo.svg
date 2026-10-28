@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Camins melòdics">
+  <rect width="128" height="128" rx="28" fill="#05161D"/>
+  <g stroke="#F4F5F6" stroke-opacity=".18" stroke-width="2">
+    <line x1="16" y1="34" x2="112" y2="34"/><line x1="16" y1="54" x2="112" y2="54"/>
+    <line x1="16" y1="74" x2="112" y2="74"/><line x1="16" y1="94" x2="112" y2="94"/>
+  </g>
+  <path d="M27 84 L50 64 L73 74 L98 44" fill="none" stroke="#F4F5F6" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" stroke-opacity=".85"/>
+  <rect x="16" y="76" width="22" height="16" rx="5" fill="#E04848"/>
+  <rect x="39" y="56" width="22" height="16" rx="5" fill="#2F8FD8"/>
+  <rect x="62" y="66" width="22" height="16" rx="5" fill="#E2BC1A"/>
+  <rect x="87" y="36" width="22" height="16" rx="5" fill="#8A57C2"/>
+</svg>
