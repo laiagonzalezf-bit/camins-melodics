@@ -1,0 +1,880 @@
+<!doctype html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Joc d'escolta i creació: camins melòdics sobre progressions d'acords, amb graus i colors.">
+<title>Camins melòdics</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Open+Sans:wght@400;600&display=swap">
+<style>
+/* Layout: a stage (the grid of degrees, like a hand-drawn board) beside a control desk; rules underneath. */
+:root{
+  --bg:#F4F5F6; --panel:#FFFFFF; --ink:#05161D; --soft:#4F616A; --muted:#8A969C; --line:#D5DADD;
+  --accent:#C73B84; --accent-ink:#FFFFFF; --cell:#FFFFFF; --hl:#F6E3EE;
+  --d1:#E04848; --d2:#EE8A2A; --d3:#E2BC1A; --d4:#3FA65A; --d5:#2F8FD8; --d6:#8A57C2; --d7:#D24C86; --d3t:#977A00;
+  --ff-head:'Barlow', 'Arial Narrow', Arial, sans-serif; --ff-body:'Open Sans', Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0B1A21; --panel:#12252E; --ink:#EAF0F2; --soft:#B4C2C8; --muted:#7F9097; --line:#2A3F48;
+  --accent:#E25A9E; --accent-ink:#0B1A21; --cell:#12252E; --hl:#3A1F31; --d3t:#E2BC1A; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#0B1A21; --panel:#12252E; --ink:#EAF0F2; --soft:#B4C2C8; --muted:#7F9097; --line:#2A3F48;
+  --accent:#E25A9E; --accent-ink:#0B1A21; --cell:#12252E; --hl:#3A1F31; --d3t:#E2BC1A; color-scheme:dark }
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--ff-body);font-size:15px;line-height:1.5}
+.wrap{max-width:1180px;margin:0 auto;padding-block:28px 40px;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));display:flex;flex-direction:column;gap:24px}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px}
+h1{font-family:var(--ff-head);font-weight:600;font-size:clamp(30px,5vw,44px);line-height:1.05;margin:0;color:var(--accent);text-wrap:balance}
+.sub{margin:4px 0 0;color:var(--soft);max-width:60ch}
+.eyebrow{font-family:var(--ff-head);font-weight:700;letter-spacing:.14em;text-transform:uppercase;font-size:12px;color:var(--muted)}
+.main{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:20px;align-items:start}
+@media (max-width:860px){.main{grid-template-columns:minmax(0,1fr)}}
+.stage{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;min-width:0;display:flex;flex-direction:column;gap:12px}
+.stage-top{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
+.status{font-size:13px;color:var(--soft);min-height:20px}
+svg#board{width:100%;height:auto;display:block;touch-action:manipulation;user-select:none}
+.boardwrap{overflow-x:auto;min-width:0}
+.keybar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
+.keybar select{width:auto;min-width:96px}
+#boardIn{display:flex;flex-direction:column;gap:12px}
+.colsel{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.colsel select{font-size:14px;padding:5px 4px}
+.colsel label{display:flex;flex-direction:column;gap:2px;font-size:12px;color:var(--muted);font-family:var(--ff-head);letter-spacing:.06em;text-transform:uppercase}
+select,input[type=range]{font:inherit;color:var(--ink)}
+select{background:var(--cell);border:1px solid var(--line);border-radius:8px;padding:6px 8px;width:100%;font-family:var(--ff-head);font-size:16px;font-weight:600;text-transform:none;letter-spacing:0}
+.desk{display:flex;flex-direction:column;gap:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.card h2{font-family:var(--ff-head);font-weight:600;font-size:18px;margin:0}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.field{display:flex;flex-direction:column;gap:4px;flex:1;min-width:120px}
+.field span{font-size:12px;color:var(--muted);font-family:var(--ff-head);letter-spacing:.06em;text-transform:uppercase}
+button{font-family:var(--ff-head);font-weight:600;font-size:15px;border-radius:999px;border:1px solid var(--line);background:var(--cell);color:var(--ink);padding:8px 14px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+button:focus-visible,select:focus-visible,input:focus-visible,.seg button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden}
+.seg button{border:0;border-radius:0;padding:6px 12px;font-size:14px}
+.toggles{display:flex;flex-wrap:wrap;gap:6px}
+.toggles button{font-size:13px;padding:5px 10px}
+.tempo{display:flex;align-items:center;gap:10px}
+.tempo input{flex:1;accent-color:var(--accent)}
+.tempo output{font-variant-numeric:tabular-nums;font-family:var(--ff-head);font-weight:600;min-width:62px;text-align:right}
+.mixer{display:flex;flex-direction:column;gap:8px}
+.mix{display:grid;grid-template-columns:82px minmax(0,1fr) 40px;gap:10px;align-items:center;font-family:var(--ff-head);font-weight:600;font-size:14px}
+.mix input{width:100%;accent-color:var(--accent)}
+.mix output{font-size:13px;color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
+.mixfoot{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.mixfoot button{font-size:13px;padding:5px 10px}
+.guess{background:var(--hl);border-color:transparent}
+.demo{border-color:var(--accent)}
+.demo p{margin:0;font-size:14px;color:var(--soft)}
+.banner{font-family:var(--ff-head);font-weight:600;font-size:20px;color:var(--accent);min-height:28px}
+.banner small{display:block;font-family:var(--ff-body);font-weight:400;font-size:13px;color:var(--soft)}
+.guess p{margin:0;font-size:14px;color:var(--soft)}
+.rules{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:14px}
+.rules h2{font-family:var(--ff-head);font-weight:600;font-size:22px;margin:0}
+.levels{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:0;padding:0;list-style:none;counter-reset:lv}
+.levels li{counter-increment:lv;border-top:3px solid var(--line);padding-top:10px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.levels li::before{content:"Nivell " counter(lv);font-family:var(--ff-head);font-weight:700;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+.levels b{font-family:var(--ff-head);font-size:17px;font-weight:600}
+.levels span{color:var(--soft);font-size:14px}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;color:var(--soft)}
+.legend i{display:inline-block;width:14px;height:14px;border-radius:50%;vertical-align:-2px;margin-right:6px}
+footer{font-size:13px;color:var(--muted)}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="eyebrow">Joc d'escolta i creació</div>
+      <h1>Camins melòdics</h1>
+      <p class="sub">Cada columna és un acord. Les notes encerclades són les notes de l'acord. Tria un camí, una o dues notes per acord, i escolta'l sobre la progressió. També el podeu cantar o tocar amb el fons de la progressió.</p>
+    </div>
+    <div class="row">
+      <button class="primary" id="demo" type="button">▶ Demostració</button>
+      <button id="play" type="button">▶ El meu camí</button>
+      <button id="random" type="button">Camí a l'atzar</button>
+      <button id="clear" type="button">Esborra</button>
+    </div>
+  </header>
+
+  <div class="main">
+    <section class="stage" aria-label="Graella de graus">
+      <div class="stage-top">
+        <div>
+          <div class="banner" id="banner" aria-live="polite"></div>
+          <div class="status" id="status"></div>
+        </div>
+        <div class="seg" role="group" aria-label="Notes per acord">
+          <button type="button" id="n1" aria-pressed="true">1 nota per acord</button>
+          <button type="button" id="n2" aria-pressed="false">2 notes per acord</button>
+        </div>
+      </div>
+      <div class="keybar">
+        <label for="key" class="eyebrow">Tonalitat</label>
+        <select id="key" aria-label="Tònica"></select>
+        <div class="seg" role="group" aria-label="Mode">
+          <button type="button" id="mMaj" aria-pressed="true">Major</button>
+          <button type="button" id="mMin" aria-pressed="false">Menor</button>
+        </div>
+        <span class="status" id="keyHint" style="margin:0"></span>
+      </div>
+      <div class="toggles" role="group" aria-label="Vista">
+        <button type="button" id="vColors" aria-pressed="true">Colors dels graus</button>
+        <button type="button" id="vPrev" aria-pressed="true">Escolta la nota en posar-la</button>
+        <button type="button" id="vPrevC" aria-pressed="true">…amb l'acord</button>
+      </div>
+      <div class="boardwrap"><div id="boardIn"><svg id="board" viewBox="0 0 610 500" role="img" aria-label="Graella de graus de l'1 al 7 per a cada acord"></svg>
+      <div class="colsel" id="colsel"></div></div></div>
+      <div class="legend">
+        <span>Colors dels graus, com a Hooktheory: <b style="color:var(--d1)">1</b> <b style="color:var(--d2)">2</b> <b style="color:var(--d3t)">3</b> <b style="color:var(--d4)">4</b> <b style="color:var(--d5)">5</b> <b style="color:var(--d6)">6</b> <b style="color:var(--d7)">7</b>. Cada acord pren el color del seu grau.</span>
+      </div>
+      <div class="legend">
+        <span><i style="border:2px solid var(--muted);border-radius:4px;opacity:.6"></i>franja suau: notes de l'acord</span>
+        <span><i style="background:var(--muted);border-radius:4px"></i>bloc ple: nota del camí, del color del seu grau</span>
+        <span><i style="background:var(--muted);border:2px dashed var(--ink);border-radius:4px"></i>vora discontínua: nota de pas</span>
+        <span><i style="background:var(--muted);border:2px solid var(--ink);border-radius:4px"></i>vora contínua: tensió (9, 11, 13) en acords de 7a</span>
+        <span>número ratllat: nota a evitar sobre aquest acord</span>
+        <span>Amb 2 notes per acord, cada compàs es parteix en dues meitats.</span>
+      </div>
+    </section>
+
+    <aside class="desk">
+      <div class="card demo">
+        <h2>Demostració</h2>
+        <p>La progressió sona en bucle i a cada volta apareix un camí nou del nivell triat. Amb «Volta per cantar», cada camí sona una vegada i a la volta següent el canteu vosaltres.</p>
+        <label class="field"><span>Nivell dels camins</span><select id="level"></select></label>
+        <p id="levelHint"></p>
+        <label class="field"><span>Durada de la nota de pas</span>
+          <select id="pasR"><option value="31">3 temps + 1 temps (més idiomàtic)</option><option value="22">2 temps + 2 temps</option></select>
+        </label>
+        <div class="toggles"><button type="button" id="tSing" aria-pressed="true">Volta per cantar</button></div>
+      </div>
+
+      <div class="card">
+        <h2>Progressió</h2>
+        <div class="row">
+          <label class="field"><span>Model</span>
+            <select id="preset"></select>
+          </label>
+        </div>
+        <div class="row">
+          <label class="field"><span>Acords</span>
+            <select id="type"><option value="3">Tríades</option><option value="4">Amb 7a</option></select>
+          </label>
+        </div>
+        <div class="row">
+          <label class="field"><span>Etiquetes</span>
+            <select id="labels"><option value="deg">Graus (1–7)</option><option value="name">Noms de nota</option></select>
+          </label>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>So</h2>
+        <div class="row">
+          <label class="field"><span>Acompanyament</span>
+            <select id="style">
+              <option value="pop">Pop (Rhodes, guitarra, baix i bateria)</option>
+              <option value="bossa">Bossa nova (guitarra i baix)</option>
+              <option value="balada">Balada (piano arpegiat)</option>
+              <option value="pad">Acords llargs</option>
+            </select>
+          </label>
+          <label class="field"><span>So de la melodia</span>
+            <select id="leadSel">
+              <option value="flauta">Flauta</option>
+              <option value="vibrafon">Vibràfon</option>
+              <option value="piano">Piano</option>
+              <option value="guitar">Guitarra</option>
+            </select>
+          </label>
+        </div>
+        <p class="status" id="soundStatus" style="margin:0">Els sons reals es carreguen la primera vegada que sona.</p>
+      </div>
+
+      <div class="card">
+        <h2>Mesclador</h2>
+        <div class="mixer" id="mixer"></div>
+        <div class="mixfoot"><span class="status" style="margin:0">Els canvis se senten de seguida.</span><button type="button" id="mixReset">Restableix</button></div>
+        <div class="tempo"><label for="bpm" class="eyebrow">Tempo</label><input id="bpm" type="range" min="60" max="130" value="88"><output id="bpmOut" for="bpm">88 bpm</output></div>
+        <div class="toggles" role="group" aria-label="Capes que sonen">
+          <button type="button" id="tChords" aria-pressed="true">Acords</button>
+          <button type="button" id="tBass" aria-pressed="true">Baix</button>
+          <button type="button" id="tDrums" aria-pressed="true">Bateria</button>
+          <button type="button" id="tMel" aria-pressed="true">Melodia del camí</button>
+          <button type="button" id="tClick" aria-pressed="false">Metrònom</button>
+        </div>
+        <p class="status" style="margin:0">Traieu la melodia del camí per cantar-lo o tocar-lo vosaltres amb el fons.</p>
+      </div>
+
+      <div class="card guess">
+        <h2>Endevina el camí</h2>
+        <p>Sona un camí amagat. Marqueu-lo a la graella i comproveu-lo.</p>
+        <div class="row">
+          <button type="button" id="gNew">Nou camí amagat</button>
+          <button type="button" id="gCheck" disabled>Comprova</button>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <section class="rules" aria-labelledby="rt">
+    <h2 id="rt">Com es juga: de més fàcil a més difícil</h2>
+    <ol class="levels">
+      <li><b>Tots alhora</b><span>Una nota per acord. La mestra assenyala el camí i tothom el canta o el toca.</span></li>
+      <li><b>El camí més curt</b><span>Cada grup tria el seu camí: només per grau conjunt o quedant-se a la nota comuna.</span></li>
+      <li><b>Dues notes per acord</b><span>Entre dues notes de l'acord s'hi pot posar una nota de pas.</span></li>
+      <li><b>Amb ritme</b><span>Encaixeu el camí en una fórmula de joc de mans o en la cèl·lula de vuit corxeres.</span></li>
+      <li><b>Pregunta i resposta</b><span>Un fa el camí dels acords 1 i 2; un altre el continua amb els acords 3 i 4.</span></li>
+      <li><b>Sense graella</b><span>Canteu-lo de memòria i transcriviu el camí que més us agradi.</span></li>
+    </ol>
+    <p class="status" style="margin:0">Rols per tocar: baix (fonamental de cada acord), acords (piano, guitarra, ukulele, làmines), camins (veu i instruments melòdics). Amb graus, cada instrumentista només ha de trobar el seu 1.</p>
+  </section>
+
+  <footer>Laia González Fernández · Didàctica del llenguatge i l'expressió musical II · ESMUC. Idea adaptada d'un exercici de «melody paths». Sons: contrabaix, piano, Rhodes i guitarra de MusyngKite (CC BY-SA 3.0, gleitz/midi-js-soundfonts); bateria Virtuosity Drums (CC0).</footer>
+</div>
+
+<script>
+(function(){
+"use strict";
+const $=id=>document.getElementById(id);
+const DEGCOL=["","--d1","--d2","--d3","--d4","--d5","--d6","--d7"];
+const LETTERS=["do","re","mi","fa","sol","la","si"];
+const NATPC=[0,2,4,5,7,9,11];
+const SCALES={maj:[0,2,4,5,7,9,11],min:[0,2,3,5,7,8,10]};
+const KEYS={Gb:[4,6],C:[0,0],Cs:[0,1],Db:[1,1],D:[1,2],Eb:[2,3],E:[2,4],F:[3,5],Fs:[3,6],G:[4,7],Gs:[4,8],Ab:[5,8],A:[5,9],Bb:[6,10],B:[6,11]};
+const KEYNAME={Gb:"Sol♭",C:"Do",Cs:"Do♯",Db:"Re♭",D:"Re",Eb:"Mi♭",E:"Mi",F:"Fa",Fs:"Fa♯",G:"Sol",Gs:"Sol♯",Ab:"La♭",A:"La",Bb:"Si♭",B:"Si"};
+const MINREL={C:"Eb",Cs:"E",D:"F",Eb:"Gb",E:"G",F:"Ab",Fs:"A",G:"Bb",Gs:"B",A:"C",Bb:"Db",B:"D"};
+const KEYLIST={maj:["C","Db","D","Eb","E","F","Fs","G","Ab","A","Bb","B"],min:["C","Cs","D","Eb","E","F","Fs","G","Gs","A","Bb","B"]};
+const QI={"":[0,4,7],"m":[0,3,7],"°":[0,3,6],"maj7":[0,4,7,11],"7":[0,4,7,10],"m7":[0,3,7,10],"ø7":[0,3,6,10],"°7":[0,3,6,9]};
+const ROM=["","I","II","III","IV","V","VI","VII"];
+/* chord = {d:root degree 1–7, a:root alteration in semitones, q:quality or null = diatonic (follows Tríades/7a)} */
+const C=(d,q=null,a=0,s=0)=>({d,q,a,s});
+const PRESETS=[
+ {g:"Pop",id:"pop1",name:"I – V – vi – IV",mode:"maj",ch:[C(1),C(5),C(6),C(4)]},
+ {g:"Pop",id:"pop5",name:"I – IV – vi – V",mode:"maj",ch:[C(1),C(4),C(6),C(5)]},
+ {g:"Pop",id:"pop3",name:"vi – IV – I – V",mode:"maj",ch:[C(6),C(4),C(1),C(5)]},
+ {g:"Pop",id:"pop2",name:"I – vi – IV – V",mode:"maj",ch:[C(1),C(6),C(4),C(5)]},
+ {g:"Pop",id:"pop6",name:"IV – I – V – vi",mode:"maj",ch:[C(4),C(1),C(5),C(6)]},
+ {g:"Pop",id:"pop4",name:"I – IV – V – I",mode:"maj",ch:[C(1),C(4),C(5),C(1)]},
+ {g:"Pop",id:"pop7",name:"IV – V – iii – vi",mode:"maj",ch:[C(4),C(5),C(3),C(6)]},
+ {g:"Pop",id:"video",name:"vi – ii – vi – iii",mode:"maj",ch:[C(6),C(2),C(6),C(3)]},
+ {g:"Pop",id:"pop8",name:"I – ♭VII – IV – I (mixolidi)",mode:"maj",ch:[C(1),C(7,"",-1),C(4),C(1)]},
+ {g:"Pop",id:"canon",name:"I – V – vi – iii – IV – I – IV – V (Pachelbel)",mode:"maj",ch:[C(1),C(5),C(6),C(3),C(4),C(1),C(4),C(5)]},
+ {g:"Menor",id:"min1",name:"vi – ii – V/vi – vi (i – iv – V – i)",mode:"min",ch:[C(1),C(4),C(5,""),C(1)]},
+ {g:"Menor",id:"min2",name:"vi – V – IV – V/vi (cadència andalusa)",mode:"min",ch:[C(1),C(7),C(6),C(5,"")]},
+ {g:"Menor",id:"min4",name:"vi – V – IV – V",mode:"min",ch:[C(1),C(7),C(6),C(7)]},
+ {g:"Jazz · Real Book",id:"j1",name:"ii7 – V7 – Imaj7 – Imaj7",mode:"maj",ch:[C(2,"m7"),C(5,"7"),C(1,"maj7"),C(1,"maj7")]},
+ {g:"Jazz · Real Book",id:"j5",name:"viiø7 – V7/vi – vi7 – vi7 (ii–V menor)",mode:"min",ch:[C(2,"ø7"),C(5,"7"),C(1,"m7"),C(1,"m7")]},
+ {g:"Jazz · Real Book",id:"j2",name:"Imaj7 – vi7 – ii7 – V7 (turnaround)",mode:"maj",ch:[C(1,"maj7"),C(6,"m7"),C(2,"m7"),C(5,"7")]},
+ {g:"Jazz · Real Book",id:"j4",name:"Imaj7 – V7/ii – ii7 – V7 (turnaround amb dominant)",mode:"maj",ch:[C(1,"maj7"),C(6,"7",0,2),C(2,"m7"),C(5,"7")]},
+ {g:"Jazz · Real Book",id:"j3",name:"iii7 – vi7 – ii7 – V7",mode:"maj",ch:[C(3,"m7"),C(6,"m7"),C(2,"m7"),C(5,"7")]},
+ {g:"Jazz · Real Book",id:"j7",name:"ii7 – ♭II7 – Imaj7 – Imaj7 (substitució de trítò)",mode:"maj",ch:[C(2,"m7"),C(2,"7",-1),C(1,"maj7"),C(1,"maj7")]},
+ {g:"Jazz · Real Book",id:"j8",name:"iv7 – ♭VII7 – Imaj7 – Imaj7 (backdoor)",mode:"maj",ch:[C(4,"m7"),C(7,"7",-1),C(1,"maj7"),C(1,"maj7")]},
+ {g:"Jazz · Real Book",id:"j9",name:"Imaj7 – Imaj7 – V7/V – V7/V – ii7 – V7 – Imaj7 – Imaj7 (com a Take the A Train)",mode:"maj",ch:[C(1,"maj7"),C(1,"maj7"),C(2,"7",0,5),C(2,"7",0,5),C(2,"m7"),C(5,"7"),C(1,"maj7"),C(1,"maj7")]},
+ {g:"Jazz · Real Book",id:"j10",name:"ii–V–I que baixa un to (com a Tune Up, 8)",mode:"maj",ch:[C(3,"m7"),C(6,"7",0,2),C(2,"maj7"),C(2,"maj7"),C(2,"m7"),C(5,"7"),C(1,"maj7"),C(1,"maj7")]},
+ {g:"Jazz · Real Book",id:"j6",name:"Cicle de quintes (com a Autumn Leaves, 8)",mode:"maj",ch:[C(2,"m7"),C(5,"7"),C(1,"maj7"),C(4,"maj7"),C(7,"ø7"),C(3,"7",0,6),C(6,"m7"),C(6,"m7")]},
+ {g:"Jazz · Real Book",id:"j11",name:"vi7 – vi7 – ii7 – ii7 – viiø7 – V7/vi – vi7 – vi7 (com a Blue Bossa)",mode:"min",ch:[C(1,"m7"),C(1,"m7"),C(4,"m7"),C(4,"m7"),C(2,"ø7"),C(5,"7"),C(1,"m7"),C(1,"m7")]},
+ {g:"Jazz · Real Book",id:"j12",name:"Imaj7 – V7/ii – ii7 – V7 – iii7 – V7/ii – ii7 – V7 (turnaround de Rhythm changes)",mode:"maj",ch:[C(1,"maj7"),C(6,"7",0,2),C(2,"m7"),C(5,"7"),C(3,"m7"),C(6,"7",0,2),C(2,"m7"),C(5,"7")]},
+ {g:"Jazz · Real Book",id:"blues",name:"Blues de 12 compassos",mode:"maj",ch:[C(1,"7"),C(4,"7"),C(1,"7"),C(1,"7"),C(4,"7"),C(4,"7"),C(1,"7"),C(6,"7",0,2),C(2,"m7"),C(5,"7"),C(1,"7"),C(5,"7")]},
+ {g:"Jazz · Real Book",id:"mblues",name:"Blues menor de 12 compassos (des del vi)",mode:"min",ch:[C(1,"m7"),C(1,"m7"),C(1,"m7"),C(1,"m7"),C(4,"m7"),C(4,"m7"),C(1,"m7"),C(1,"m7"),C(6,"7"),C(5,"7"),C(1,"m7"),C(5,"7")]}
+];
+const EXTRA=[ // chromatic chords offered in the column selectors
+ ["dominant secundari",C(2,"7",0,5)],["dominant secundari",C(3,"7",0,6)],["dominant secundari",C(6,"7",0,2)],["dominant secundari",C(1,"7",0,4)],
+ ["iv (préstec del menor)",C(4,"m")],["♭VII (préstec)",C(7,"",-1)],["♭VI (préstec)",C(6,"",-1)],["V/vi (dominant del menor)",C(3,"",0,6)]
+];
+const LEVELS=[
+ [1,"Notes comunes","Una nota per acord. Si la nota d'abans és de l'acord nou, es queda. Si no, va a la més propera."],
+ [2,"Grau conjunt","Una nota per acord. Es mou per grau conjunt sempre que pot; si no, nota comuna."],
+ [3,"Salts dins l'acord","Una nota per acord. Pot saltar a qualsevol nota de l'acord (terceres, quartes)."],
+ [4,"Dues notes de l'acord","Dues notes per acord, totes dues de l'acord."],
+ [5,"Amb notes de pas","La segona nota, a la part feble, és una nota de pas, una broderia o una anticipació: entra i surt per grau conjunt i mai no és una nota a evitar."]
+];
+const state={preset:"pop1",mode:"maj",prog:PRESETS[0].ch.map(c=>({...c})),key:"C",type:3,labels:"deg",per:1,path:null,bpm:88,style:"pop",leadInst:"flauta",level:"prog",
+  layers:{chords:true,bass:true,drums:true,mel:true,click:false},playing:false,mode2:null,colors:true,allNotes:true,preview:true,previewChord:true,pasRhythm:"31",col:-1,cur:null,hidden:null,sing:true};
+const N=()=>state.prog.length;
+const emptyPath=()=>state.prog.map(()=>[]);
+state.path=emptyPath();
+
+/* ---------- theory ---------- */
+const SC=()=>SCALES.maj;
+const tonicPc=()=>KEYS[state.key][1];
+function spell(letterIdx,pc){ // note name from a letter and a pitch class
+  let acc=((pc-NATPC[letterIdx])%12+12)%12; if(acc>6)acc-=12;
+  const s={"-2":"𝄫","-1":"♭","0":"","1":"♯","2":"𝄪"}[acc]||"";
+  return LETTERS[letterIdx]+s;
+}
+const rowLetter=d=>(KEYS[state.key][0]+d-1)%7;
+const scalePc=d=>(tonicPc()+SC()[d-1])%12;
+function chordInfo(c){ // -> {rows:[d...], pcs:{row:pc}, rootPc, ints, q}
+  const n=c.q!=null?QI[c.q].length:state.type;
+  const rows=[]; for(let k=0;k<n;k++)rows.push(((c.d-1+2*k)%7)+1);
+  const rootPc=(scalePc(c.d)+c.a+12)%12;
+  const pcs={};
+  if(c.q!=null){QI[c.q].forEach((iv,k)=>{pcs[rows[k]]=(rootPc+iv)%12;});}
+  else rows.forEach(r=>{pcs[r]=scalePc(r);});
+  const ints=rows.map(r=>((pcs[r]-rootPc)%12+12)%12);
+  return {rows,pcs,rootPc,ints};
+}
+function qualityOf(ints){
+  const has=x=>ints.includes(x);
+  const third=has(4)?"M":"m", fifth=has(6)?"d":"P", sev=ints.length>3?(has(11)?"M7":has(10)?"m7":"d7"):null;
+  if(!sev)return third==="M"?"":fifth==="d"?"°":"m";
+  if(third==="M")return sev==="M7"?"maj7":"7";
+  if(fifth==="d")return sev==="d7"?"°7":"ø7";
+  return "m7";
+}
+function chordLabel(c){
+  const I=chordInfo(c), q=c.q!=null?c.q:qualityOf(I.ints);
+  const upper=q===""||q==="maj7"||q==="7";
+  const acc=c.a<0?"♭":c.a>0?"♯":"";
+  let r=ROM[c.d]; if(!upper)r=r.toLowerCase();
+  const rsuf={"":"","m":"","°":"°","maj7":"maj7","7":"7","m7":"7","ø7":"ø7","°7":"°7"}[q];
+  const nm=spell(rowLetter(c.d),I.rootPc); const nsuf={"":"","m":" m","°":"°","maj7":"maj7","7":"7","m7":"m7","ø7":"m7♭5","°7":"°7"}[q];
+  let roman=acc+r+rsuf;
+  if(c.s){ // Hooktheory-style secondary dominant: V7/x
+    const T=chordInfo({d:c.s,q:null,a:0,s:0}); const tq=qualityOf(T.ints.slice(0,3));
+    let tr=ROM[c.s]; if(tq!=="")tr=tr.toLowerCase(); roman="V"+(q==="7"?"7":"")+"/"+tr;
+  }
+  return {roman,name:nm.charAt(0).toUpperCase()+nm.slice(1)+nsuf};
+}
+function colPc(i,d){const I=chordInfo(state.prog[i]); return d in I.pcs?I.pcs[d]:scalePc(d);}
+function chordPcs(i){const I=chordInfo(state.prog[i]);return I.rows.map(r=>I.pcs[r]);}
+// avoid note: a non-chord tone a semitone above a chord tone (minor 9th against it)
+function isAvoid(i,d){if(chordRows(i).includes(d))return false;const pc=colPc(i,d);return chordPcs(i).some(c=>((pc-c)%12+12)%12===1);}
+// available tension: a non-avoid non-chord tone over a seventh chord (9, 11, ♯11, 13)
+function isTension(i,d){if(chordRows(i).includes(d)||isAvoid(i,d))return false;return chordRows(i).length>=4;}
+function noteKind(i,d){return chordRows(i).includes(d)?"chord":isAvoid(i,d)?"avoid":isTension(i,d)?"tension":"pass";}
+function colDurs(i,col){ // fractions of the bar for each note
+  if(col.length<2)return [1];
+  const b=col[1]; if(b!=null&&state.pasRhythm==="31"&&noteKind(i,b)!=="chord"&&col[0]!=null)return [.75,.25];
+  return [.5,.5];
+}
+function colAcc(i,d){let a=((colPc(i,d)-scalePc(d))%12+12)%12; if(a>6)a-=12; return a;}
+function label(i,d){
+  if(state.labels==="name")return spell(rowLetter(d),colPc(i,d));
+  const a=colAcc(i,d); return (a<0?"♭":a>0?"♯":"")+d;
+}
+function melMidi(i,d){let base=60+tonicPc(); if(base>65)base-=12; const a=colAcc(i,d); return base+SC()[d-1]+a;}
+const chordRows=i=>chordInfo(state.prog[i]).rows;
+function cssVar(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim();}
+const fmtCol=(col,i)=>col.map(d=>d==null?"·":label(i,d)).join("–");
+
+/* ---------- board: a Hooktheory-style piano roll of scale degrees ---------- */
+const AX=56, CW=150, LH=52, TOP=14, CHH=58;
+const H=TOP+7*LH+12+CHH+8;
+const COLX=i=>AX+i*CW;                 // left edge of a bar
+const laneY=d=>TOP+(7-d)*LH;            // top of a lane
+function txtOn(d){if(!state.colors)return cssVar("--bg");return d===3?"#2B2300":"#FFFFFF";}
+const degFill=d=>state.colors?cssVar(DEGCOL[d]):cssVar("--ink");
+const degText=d=>!state.colors?cssVar("--ink"):(d===3?cssVar("--d3t"):cssVar(DEGCOL[d]));
+const chordFill=d=>state.colors?cssVar(DEGCOL[d]):cssVar("--soft");
+function render(){
+  const svg=$("board"), n=N(), W=AX+n*CW+8;
+  svg.setAttribute("viewBox",`0 0 ${W} ${H}`);
+  $("boardIn").style.minWidth=n>4?(n*110)+"px":"0";
+  const ink=cssVar("--ink"),muted=cssVar("--muted"),line=cssVar("--line"),hl=cssVar("--hl"),acc=cssVar("--accent"),panel=cssVar("--panel"),bg=cssVar("--bg");
+  let s="";
+  // lanes
+  for(let d=7;d>=1;d--){
+    const y=laneY(d); s+=`<rect x="${AX}" y="${y}" width="${n*CW}" height="${LH}" fill="${d%2?bg:panel}"/>`;
+    const dc=degText(d);
+    s+=`<text x="${AX-14}" y="${y+LH/2+8}" text-anchor="end" font-family="Barlow, Arial, sans-serif" font-weight="700" font-size="24" fill="${dc}">${d}</text>`;
+  }
+  // playhead column
+  if(state.col>=0&&state.col<n)s+=`<rect x="${COLX(state.col)}" y="${TOP}" width="${CW}" height="${7*LH}" fill="${hl}" opacity=".8"/>`;
+  // bar lines
+  for(let i=0;i<=n;i++)s+=`<line x1="${COLX(i)}" x2="${COLX(i)}" y1="${TOP}" y2="${TOP+7*LH}" stroke="${line}" stroke-width="${i%4===0?2:1}"/>`;
+  state.prog.forEach((c,i)=>{
+    const ct=chordRows(i), ccol=chordFill(c.d), x=COLX(i);
+    if(state.allNotes){for(let d=1;d<=7;d++){if(ct.includes(d))continue;const y=laneY(d);s+=`<text x="${x+18}" y="${y+LH/2+7}" font-family="Barlow, Arial, sans-serif" font-weight="500" font-size="18" fill="${degText(d)}" opacity="${isAvoid(i,d)?.3:.45}">${label(i,d)}</text>`;if(isAvoid(i,d))s+=`<line x1="${x+14}" y1="${y+LH/2}" x2="${x+42}" y2="${y+LH/2}" stroke="${degText(d)}" stroke-width="2" opacity=".5"/>`;}}
+    // chord tones: soft bands in the chord's colour, with the degree inside
+    ct.forEach(d=>{
+      const y=laneY(d);
+      s+=`<rect x="${x+6}" y="${y+7}" width="${CW-12}" height="${LH-14}" rx="8" fill="${ccol}" opacity=".16"/>`;
+      s+=`<rect x="${x+6}" y="${y+7}" width="${CW-12}" height="${LH-14}" rx="8" fill="none" stroke="${ccol}" stroke-width="1.5" opacity=".55"/>`;
+      const lab=label(i,d), dc=degText(d);
+      s+=`<text x="${x+18}" y="${y+LH/2+7}" font-family="Barlow, Arial, sans-serif" font-weight="600" font-size="${lab.length>3?15:19}" fill="${dc}" opacity=".9">${lab}</text>`;
+    });
+    // path notes as piano-roll blocks coloured by scale degree
+    const col=state.path[i]||[]; const fr=colDurs(i,col); let acc0=0;
+    col.forEach((d,k)=>{
+      const f=fr[k]||.5, off=acc0; acc0+=f;
+      if(d==null)return;
+      const y=laneY(d), w=CW*f, x0=x+CW*off+4, inChord=ct.includes(d), kind=noteKind(i,d);
+      const isCur=state.cur&&state.cur.col===i&&state.cur.d===d;
+      const dcol=degFill(d); const lab=label(i,d);
+      s+=`<rect x="${x0}" y="${y+4}" width="${w-8}" height="${LH-8}" rx="9" fill="${dcol}" ${inChord?"":kind==="tension"?`stroke="${ink}" stroke-width="2.5"`:kind==="avoid"?`stroke="${ink}" stroke-width="2" stroke-dasharray="2 4"`:`stroke="${ink}" stroke-width="2" stroke-dasharray="6 4"`}/>`;
+      if(kind==="avoid")s+=`<line x1="${x0+6}" y1="${y+LH-10}" x2="${x0+w-14}" y2="${y+10}" stroke="${ink}" stroke-width="2" opacity=".6"/>`;
+      if(isCur)s+=`<rect x="${x0-4}" y="${y}" width="${w}" height="${LH}" rx="12" fill="none" stroke="${acc}" stroke-width="4"/>`;
+      s+=`<text x="${x0+(w-8)/2}" y="${y+LH/2+8}" text-anchor="middle" font-family="Barlow, Arial, sans-serif" font-weight="700" font-size="${w<60?(lab.length>2?14:18):(lab.length>3?17:22)}" fill="${txtOn(d)}">${lab}</text>`;
+    });
+    // chord block
+    const L=chordLabel(c), cy=TOP+7*LH+12;
+    s+=`<rect x="${x+4}" y="${cy}" width="${CW-8}" height="${CHH}" rx="10" fill="${ccol}"/>`;
+    s+=`<text x="${x+CW/2}" y="${cy+28}" text-anchor="middle" font-family="Barlow, Arial, sans-serif" font-weight="700" font-size="${L.roman.length>6?20:26}" fill="${state.colors?txtOn(c.d):cssVar("--panel")}">${L.roman}</text>`;
+    s+=`<text x="${x+CW/2}" y="${cy+49}" text-anchor="middle" font-family="Barlow, Arial, sans-serif" font-weight="500" font-size="16" fill="${state.colors?txtOn(c.d):cssVar("--panel")}" opacity=".9">${L.name}</text>`;
+    // click targets: whole bar, or two halves in 2-note mode
+    for(let d=7;d>=1;d--){
+      const y=laneY(d);
+      if(state.per===2){[0,1].forEach(k=>{s+=`<rect x="${x+k*CW/2}" y="${y}" width="${CW/2}" height="${LH}" fill="transparent" data-c="${i}" data-d="${d}" data-k="${k}" style="cursor:pointer"><title>${label(i,d)}</title></rect>`;});}
+      else s+=`<rect x="${x}" y="${y}" width="${CW}" height="${LH}" fill="transparent" data-c="${i}" data-d="${d}" data-k="0" style="cursor:pointer"><title>${label(i,d)}</title></rect>`;
+    }
+  });
+  svg.innerHTML=s;
+  renderColSel(); status(); keyLabels();
+}
+function chordOptions(){
+  const opts=[];
+  for(let d=1;d<=7;d++)opts.push([`${d}|0|d|0`,C(d)]);
+  EXTRA.forEach(([l,c])=>opts.push([keyOf(c),c,l]));
+  return opts;
+}
+const keyOf=c=>`${c.d}|${c.a}|${c.q==null?"d":c.q}|${c.s||0}`;
+function renderColSel(){
+  const box=$("colsel"), n=N();
+  box.style.gridTemplateColumns=`repeat(${n},minmax(0,1fr))`;
+  if(box.childElementCount!==n){
+    box.innerHTML=state.prog.map((_,i)=>`<label for="c${i}">${n>4?"":"Acord "}${i+1}<select id="c${i}"></select></label>`).join("");
+    state.prog.forEach((_,i)=>$("c"+i).addEventListener("change",e=>{
+      const [d,a,q,sec]=e.target.value.split("|"); state.prog[i]={d:+d,a:+a,q:q==="d"?null:q,s:+sec||0};
+      $("preset").value="custom"; state.preset="custom"; state.path[i]=[]; render();}));
+  }
+  const opts=chordOptions();
+  state.prog.forEach((c,i)=>{
+    const sel=$("c"+i); const cur=keyOf(c);
+    let list=opts.slice(); if(!list.some(o=>o[0]===cur))list.push([cur,c]);
+    sel.innerHTML=list.map(([v,cc,l])=>{const L=chordLabel(cc);return `<option value="${v}">${L.roman} · ${L.name}${l?" ("+l.split(" · ")[0]+")":""}</option>`;}).join("");
+    sel.value=cur;
+  });
+}
+function relMinorOf(k){const pc=KEYS[k][1]; return Object.keys(MINREL).find(m=>KEYS[MINREL[m]][1]===pc);}
+function keyLabels(){
+  const sel=$("key");
+  let opts;
+  if(state.mode==="min"){opts=KEYLIST.min.map(m=>[MINREL[m],KEYNAME[m]]);}
+  else opts=KEYLIST.maj.map(k=>[k,KEYNAME[k]]);
+  if(!opts.some(o=>o[0]===state.key)){const pc=KEYS[state.key][1]; const f=opts.find(o=>KEYS[o[0]][1]===pc); state.key=f?f[0]:"C";}
+  const sig=state.mode+opts.map(o=>o[0]).join();
+  if(sel.dataset.sig!==sig){sel.innerHTML=opts.map(([v,t])=>`<option value="${v}">${t}</option>`).join(""); sel.dataset.sig=sig;}
+  sel.value=state.key; press("mMaj",state.mode==="maj"); press("mMin",state.mode==="min");
+  $("keyHint").textContent=state.mode==="min"
+    ? `${KEYNAME[relMinorOf(state.key)]} menor · numerat des del relatiu major (${KEYNAME[state.key]} major): la tònica és el 6`
+    : `${KEYNAME[state.key]} major · la tònica és l'1`;
+}
+function setMode(m){if(state.mode===m)return; state.mode=m; render();}
+function status(){
+  if(state.mode2==="demo")return;
+  $("status").textContent=state.hidden?"Camí amagat: escolteu i marqueu-lo a la graella.":"Camí: "+state.path.map((c,i)=>c.length?fmtCol(c,i):"·").join("  |  ");
+}
+$("board").addEventListener("click",e=>{
+  if(state.mode2==="demo")return;
+  const t=e.target.closest("rect[data-c]"); if(!t)return;
+  const i=+t.dataset.c,d=+t.dataset.d,k=+t.dataset.k; let col=state.path[i]; let added=false;
+  if(state.per===1){ added=!(col.length===1&&col[0]===d); state.path[i]=added?[d]:[]; }
+  else{
+    if(col.length===1)col=[col[0],col[0]];
+    if(col.length===0)col=[null,null];
+    added=col[k]!==d; col[k]=added?d:null;
+    state.path[i]=(col[0]==null&&col[1]==null)?[]:col;
+  }
+  render();
+  if(added&&state.preview)previewNote(i,d);
+});
+/* hear a note as soon as it is placed: the note itself, over a soft chord of that bar when nothing is playing */
+function previewNote(i,d){
+  try{
+    ensureAudio(); ac.resume();
+    if(!real&&!loadP)loadAll().then(r=>{real=r;});
+    const t=ac.currentTime+.03;
+    lead(melMidi(i,d),t,1.1);
+    if(!state.playing&&state.previewChord){const v=voicing(i,55,74); v.forEach(m=>inst("rhodes",m,t,1.3,.22,bus.keys,{wet:.2,rel:.2})); inst("bass",bassRootI(i),t,1.3,.5,bus.bass);}
+  }catch(err){}
+}
+
+/* ---------- controls ---------- */
+function press(id,v){$(id).setAttribute("aria-pressed",String(v));}
+function setPer(p){state.per=p;press("n1",p===1);press("n2",p===2);}
+$("n1").onclick=()=>{setPer(1);state.path=state.path.map(c=>{const v=c.filter(x=>x!=null);return v.slice(0,1);});render();};
+$("n2").onclick=()=>{setPer(2);render();};
+function loadPreset(id){
+  const p=PRESETS.find(x=>x.id===id); if(!p)return;
+  state.preset=id; state.mode=p.mode;
+  const mp=d=>((d-1+5)%7)+1;
+  state.prog=p.ch.map(c=>p.mode==="min"
+    ? {d:mp(c.d),a:c.a,q:c.q,s:c.s?mp(c.s):((c.d===5&&(c.q===""||c.q==="7"))?6:0)}
+    : {...c});
+  state.path=emptyPath(); state.hidden=null;
+  $("colsel").innerHTML=""; if(state.playing)stop(); render();
+}
+$("preset").innerHTML=["Pop","Menor","Jazz · Real Book"].map(g=>`<optgroup label="${g}">${PRESETS.filter(p=>p.g===g).map(p=>`<option value="${p.id}">${p.name}</option>`).join("")}</optgroup>`).join("")+`<option value="custom">La meva (canvia els acords a sota)</option>`;
+$("preset").onchange=e=>{if(e.target.value==="custom")return;loadPreset(e.target.value);};
+$("key").onchange=e=>{state.key=e.target.value;render();};
+$("mMaj").onclick=()=>setMode("maj");
+$("pasR").onchange=e=>{state.pasRhythm=e.target.value;render();};
+$("vPrev").onclick=()=>{state.preview=!state.preview;press("vPrev",state.preview);};
+$("vPrevC").onclick=()=>{state.previewChord=!state.previewChord;press("vPrevC",state.previewChord);};
+$("vColors").onclick=()=>{state.colors=!state.colors;press("vColors",state.colors);render();};
+$("mMin").onclick=()=>setMode("min");
+$("type").onchange=e=>{state.type=+e.target.value;render();};
+$("labels").onchange=e=>{state.labels=e.target.value;render();};
+$("style").onchange=e=>{state.style=e.target.value;lastVoicing=null;};
+$("leadSel").onchange=e=>{state.leadInst=e.target.value;};
+$("level").innerHTML=`<option value="prog">Progressiu: de l'1 al 5</option>`+LEVELS.map(([n,t])=>`<option value="${n}">Nivell ${n} · ${t}</option>`).join("");
+$("level").onchange=e=>{state.level=e.target.value;levelHint();};
+function levelHint(){const l=LEVELS.find(x=>String(x[0])===state.level); $("levelHint").textContent=l?l[2]:"Un camí de cada nivell, del més fàcil al més difícil.";}
+levelHint();
+$("bpm").oninput=e=>{state.bpm=+e.target.value;$("bpmOut").textContent=state.bpm+" bpm";};
+[["tChords","chords"],["tBass","bass"],["tDrums","drums"],["tMel","mel"],["tClick","click"]].forEach(([id,k])=>{
+  $(id).onclick=()=>{state.layers[k]=!state.layers[k];press(id,state.layers[k]);};
+});
+$("tSing").onclick=()=>{state.sing=!state.sing;press("tSing",state.sing);};
+$("clear").onclick=()=>{if(state.mode2==="demo")stop();state.path=emptyPath();state.hidden=null;$("gCheck").disabled=true;render();};
+
+/* ---------- path generator by level ---------- */
+const rnd=a=>a[Math.floor(Math.random()*a.length)];
+function nearest(ct,from){const m=Math.min(...ct.map(d=>Math.abs(d-from)));return ct.filter(d=>Math.abs(d-from)===m);}
+function genPath(level){
+  const n=N(), p=[]; let prev=null;
+  const firstNotes=[];
+  for(let i=0;i<n;i++){
+    const ct=chordRows(i); let a;
+    if(prev==null){a=rnd(ct.filter(d=>d>=3&&d<=6).length?ct.filter(d=>d>=3&&d<=6):ct);}
+    else if(level===1){a=ct.includes(prev)?prev:rnd(nearest(ct,prev));}
+    else if(level===2){const st=ct.filter(d=>Math.abs(d-prev)===1);a=st.length?rnd(st):(ct.includes(prev)?prev:rnd(nearest(ct,prev)));}
+    else if(level===5){ // prefer a third away (room for a passing tone), then same note (room for a neighbour), then a step
+      const th=ct.filter(d=>Math.abs(d-prev)===2), same=ct.filter(d=>d===prev), st=ct.filter(d=>Math.abs(d-prev)===1);
+      a=th.length&&Math.random()<.7?rnd(th):same.length&&Math.random()<.6?prev:st.length?rnd(st):rnd(nearest(ct,prev));
+    }
+    else {const o=ct.filter(d=>d!==prev&&Math.abs(d-prev)<=4);a=o.length?rnd(o):rnd(nearest(ct,prev));}
+    firstNotes.push(a); prev=a;
+    if(level===4){const o=ct.filter(d=>d!==a&&Math.abs(d-a)<=4);const b=o.length?rnd(o):a;p.push(b===a?[a]:[a,b]);prev=b;}
+    else p.push([a]);
+  }
+  if(level===5){
+    // the ornament sits on the weak part of the bar, is approached and left by step, and is never an avoid note
+    const ok=(i,b)=>b>=1&&b<=7&&!isAvoid(i,b);
+    for(let i=0;i<n;i++){
+      const a=firstNotes[i], nx=firstNotes[(i+1)%n], sg=Math.sign(nx-a); let b=null;
+      if(Math.abs(nx-a)===2&&ok(i,a+sg))b=a+sg;                                   // nota de pas
+      else if(nx===a){const c=[a+1,a-1].filter(x=>ok(i,x)); if(c.length)b=rnd(c);}  // broderia
+      else if(Math.abs(nx-a)===1&&ok(i,nx))b=nx;                                   // anticipació
+      p[i]=b==null||b===a?[a]:[a,b];
+    }
+  }
+  return p;
+}
+$("random").onclick=()=>{if(state.mode2==="demo")stop();state.hidden=null;$("gCheck").disabled=true;
+  const lv=state.level==="prog"?(state.per===2?4:2):+state.level; state.path=genPath(lv); setPer(lv>=4?2:1); render();};
+
+/* ---------- guessing game ---------- */
+$("gNew").onclick=()=>{
+  if(state.playing)stop();
+  const lv=state.level==="prog"?2:+state.level;
+  state.hidden=genPath(lv); state.path=emptyPath(); setPer(lv>=4?2:1); $("gCheck").disabled=false;
+  state.layers.mel=true; press("tMel",true); $("banner").textContent="Endevina el camí";
+  render(); start("guess");
+};
+$("gCheck").onclick=()=>{
+  if(!state.hidden)return; let ok=0,tot=0;
+  state.hidden.forEach((c,i)=>{tot+=c.length;c.forEach(d=>{if(state.path[i].includes(d))ok++;});});
+  state.path=state.hidden.map(c=>c.slice()); state.hidden=null; $("gCheck").disabled=true; render();
+  $("status").textContent=`Heu encertat ${ok} de ${tot} notes. Aquest era el camí: `+state.path.map(fmtCol).join("  |  ");
+};
+
+/* ---------- audio engine: real samples (bass, piano, Rhodes, guitar, drums) + two synth leads ---------- */
+let ac=null,bus=null,rev=null,noiseBuf=null,SM=null,loadP=null;
+const sets={};
+function ensureAudio(){
+  if(ac)return;
+  ac=new (window.AudioContext||window.webkitAudioContext)({latencyHint:"interactive"});
+  const len=Math.floor(ac.sampleRate*2.2), ir=ac.createBuffer(2,len,ac.sampleRate);
+  for(let c=0;c<2;c++){const d=ir.getChannelData(c);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,3.2);}
+  rev=ac.createConvolver(); rev.buffer=ir;
+  noiseBuf=ac.createBuffer(1,ac.sampleRate,ac.sampleRate); const nd=noiseBuf.getChannelData(0); for(let i=0;i<nd.length;i++)nd[i]=Math.random()*2-1;
+  makeBus();
+}
+function makeBus(){
+  const out=ac.createGain(), comp=ac.createDynamicsCompressor(), wet=ac.createGain();
+  comp.threshold.value=-12; comp.ratio.value=2.5; comp.attack.value=.01; comp.release.value=.2;
+  out.gain.value=.95; wet.gain.value=.9;
+  const ch=k=>{const g=ac.createGain();g.connect(out);return g;};
+  bus={out,wet,drums:ch(),bass:ch(),keys:ch(),mel:ch()};
+  const mx=state.mix||{mel:100,keys:60,bass:95,drums:75,rev:90,out:95};
+  bus.drums.gain.value=mx.drums/100; bus.bass.gain.value=mx.bass/100; bus.keys.gain.value=mx.keys/100; bus.mel.gain.value=mx.mel/100; wet.gain.value=mx.rev/100; out.gain.value=mx.out/100;
+  wet.connect(rev); rev.connect(out); out.connect(comp); comp.connect(ac.destination);
+}
+async function decode(url){
+  const r=await fetch(url); if(!r.ok)throw new Error(url);
+  const ab=await r.arrayBuffer();
+  const buf=await new Promise((res,rej)=>{const p=ac.decodeAudioData(ab,res,rej); if(p&&p.catch)p.catch(rej);});
+  const d=buf.getChannelData(0); let pk=0; for(let i=0;i<d.length;i++){const a=Math.abs(d[i]); if(a>pk)pk=a;}
+  let o=0; const th=pk*.03; while(o<d.length&&Math.abs(d[o])<th)o++;
+  return {buf,off:Math.max(0,o/buf.sampleRate-.002)};
+}
+function loadAll(){
+  if(loadP)return loadP;
+  setSound("Carregant sons…",false);
+  loadP=(async()=>{
+    const r=await fetch("samples/manifest.json"); SM=await r.json();
+    const jobs=[];
+    ["bass","piano","rhodes","guitar"].forEach(k=>{sets[k]={};SM[k].forEach(n=>jobs.push(decode(`samples/${k}/${n}.mp3`).then(s=>{sets[k][n]=s;})));});
+    sets.drums={}; Object.entries(SM.drums).forEach(([k,list])=>{sets.drums[k]=[];list.forEach((f,i)=>jobs.push(decode(`samples/drums/${f}.mp3`).then(s=>{sets.drums[k][i]=s;})));});
+    await Promise.all(jobs); setSound("Sons reals a punt",true); return true;
+  })().catch(e=>{setSound("No s'han pogut carregar els sons reals: sona amb sons sintètics",false);return false;});
+  return loadP;
+}
+let real=false;
+function setSound(t,ok){const el=$("soundStatus"); if(el){el.textContent=t; el.dataset.ok=ok?"1":"0";}}
+const hz=m=>440*Math.pow(2,(m-69)/12);
+const hum=(ms=6)=>(Math.random()*2-1)*ms/1000;
+const vr=(v,r=.12)=>v*(1-r/2+Math.random()*r);
+function toWet(node,amt){if(!amt)return;const g=ac.createGain();g.gain.value=amt;node.connect(g);g.connect(bus.wet);}
+function playBuf(s,t,rate,vel,dest,{dur=null,rel=.08,wet=0,cut=0,pan=0}={}){
+  const src=ac.createBufferSource(), g=ac.createGain();
+  src.buffer=s.buf; src.playbackRate.value=rate;
+  g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(vel,t+.004);
+  let last=src; if(cut){const f=ac.createBiquadFilter();f.type="lowpass";f.frequency.value=cut;src.connect(f);last=f;}
+  last.connect(g);
+  let node=g; if(pan&&ac.createStereoPanner){const p=ac.createStereoPanner();p.pan.value=pan;g.connect(p);node=p;}
+  node.connect(dest); toWet(node,wet);
+  const natural=(s.buf.duration-s.off)/rate; let end=t+natural;
+  if(dur!=null&&dur<natural){g.gain.setTargetAtTime(0,t+dur,rel);end=t+dur+rel*6;}
+  src.start(Math.max(t,ac.currentTime),s.off); src.stop(Math.min(end,t+natural)+.02);
+}
+function inst(k,m,t,dur,vel,dest,opt={}){
+  const set=sets[k]; if(!real||!set){return synthKeys(m,t,dur,vel,dest,k);}
+  const ns=SM[k]; let best=ns[0]; ns.forEach(n=>{if(Math.abs(n-m)<Math.abs(best-m))best=n;});
+  playBuf(set[best],t,Math.pow(2,(m-best)/12),vel,dest,{dur,...opt});
+}
+function drum(k,t,vel,opt={}){
+  if(!real){return synthDrum(k,t,vel);}
+  const l=sets.drums[k]; if(!l||!l.length)return; const s=l[Math.floor(Math.random()*l.length)];
+  playBuf(s,t+hum(4),1,vr(vel),bus.drums,{wet:k==="snare"||k==="xstick"?.12:.04,pan:{ride:.25,bell:.25,hhclosed:-.2,hhpedal:-.2,hhhalf:-.2}[k]||0,...opt});
+}
+/* synth fallbacks (only if the samples cannot load) */
+function synthKeys(m,t,dur,vel,dest,k){
+  const o=ac.createOscillator(),g=ac.createGain(),f=ac.createBiquadFilter();
+  o.type=k==="bass"?"triangle":"triangle"; o.frequency.value=hz(m); f.type="lowpass"; f.frequency.value=k==="bass"?500:2200;
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vel*.5,t+.01);g.gain.setTargetAtTime(0,t+Math.max(.05,dur||.5),.1);
+  o.connect(f);f.connect(g);g.connect(dest);o.start(t);o.stop(t+(dur||.5)+.6);
+}
+function synthDrum(k,t,vel){
+  if(k==="kick"){const o=ac.createOscillator(),g=ac.createGain();o.frequency.setValueAtTime(140,t);o.frequency.exponentialRampToValueAtTime(45,t+.12);g.gain.setValueAtTime(vel,t);g.gain.exponentialRampToValueAtTime(.001,t+.3);o.connect(g);g.connect(bus.drums);o.start(t);o.stop(t+.35);return;}
+  const n=ac.createBufferSource(),f=ac.createBiquadFilter(),g=ac.createGain();n.buffer=noiseBuf;f.type="highpass";f.frequency.value=k==="snare"||k==="xstick"?1500:7000;
+  const d=k==="snare"?.16:.05;g.gain.setValueAtTime(vel*.5,t);g.gain.exponentialRampToValueAtTime(.001,t+d);n.connect(f);f.connect(g);g.connect(bus.drums);n.start(t);n.stop(t+d+.02);
+}
+/* lead voices for the path melody */
+function flute(m,t,dur,vel){
+  const f0=hz(m), o=ac.createOscillator(), o2=ac.createOscillator(), vib=ac.createOscillator(), vg=ac.createGain(), g=ac.createGain(), lp=ac.createBiquadFilter();
+  o.type="sine"; o2.type="triangle"; o.frequency.value=f0; o2.frequency.value=f0*2;
+  const g2=ac.createGain(); g2.gain.value=.12;
+  vib.frequency.value=5; vg.gain.setValueAtTime(0,t); vg.gain.linearRampToValueAtTime(f0*.008,t+Math.min(.45,dur*.6));
+  vib.connect(vg); vg.connect(o.frequency); vg.connect(o2.frequency);
+  lp.type="lowpass"; lp.frequency.value=4200;
+  o.connect(lp); o2.connect(g2); g2.connect(lp); lp.connect(g);
+  g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(vel,t+.06); g.gain.setTargetAtTime(vel*.85,t+.08,.2); g.gain.setTargetAtTime(0,t+dur*.95,.04);
+  // breath at the attack
+  const n=ac.createBufferSource(), bp=ac.createBiquadFilter(), ng=ac.createGain(); n.buffer=noiseBuf; bp.type="bandpass"; bp.frequency.value=f0*2; bp.Q.value=2;
+  ng.gain.setValueAtTime(vel*.35,t); ng.gain.exponentialRampToValueAtTime(.001,t+.12); n.connect(bp); bp.connect(ng); ng.connect(bus.mel);
+  g.connect(bus.mel); toWet(g,.3);
+  [o,o2,vib].forEach(x=>{x.start(t);x.stop(t+dur+.4);}); n.start(t); n.stop(t+.15);
+}
+function vibes(m,t,dur,vel){
+  const f0=hz(m), car=ac.createOscillator(), mod=ac.createOscillator(), mg=ac.createGain(), g=ac.createGain(), trem=ac.createOscillator(), tg=ac.createGain(), amp=ac.createGain();
+  car.frequency.value=f0; mod.frequency.value=f0*4; mg.gain.setValueAtTime(f0*2.2,t); mg.gain.exponentialRampToValueAtTime(f0*.02,t+.25);
+  mod.connect(mg); mg.connect(car.frequency);
+  trem.frequency.value=5.5; tg.gain.value=.25; amp.gain.value=.75; trem.connect(tg); tg.connect(amp.gain);
+  car.connect(amp); amp.connect(g);
+  g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(vel,t+.004); g.gain.exponentialRampToValueAtTime(vel*.3,t+Math.min(2.5,dur+.6)); g.gain.setTargetAtTime(0,t+dur,.15);
+  g.connect(bus.mel); toWet(g,.35);
+  [car,mod,trem].forEach(x=>{x.start(t);x.stop(t+dur+1);});
+}
+function lead(m,t,dur){
+  const k=state.leadInst;
+  if(k==="flauta")return flute(m,t,dur,.42);
+  if(k==="vibrafon")return vibes(m,t,dur,.5);
+  inst(k,m+(k==="guitar"?0:0),t,dur*.97,k==="piano"?1:1.1,bus.mel,{wet:.22,rel:.12});
+}
+function click(t,acc){const o=ac.createOscillator(),g=ac.createGain();o.frequency.value=acc?1600:1100;g.gain.setValueAtTime(.18,t);g.gain.exponentialRampToValueAtTime(.001,t+.05);o.connect(g);g.connect(bus.out);o.start(t);o.stop(t+.06);}
+
+/* voicings with voice leading: each chord takes the inversion closest to the previous one */
+let lastVoicing=null;
+function voicing(i,lo,hi){
+  const I=chordInfo(state.prog[i]); const tones=I.rows.map(r=>I.pcs[r]);
+  let best=null,bestScore=1e9;
+  for(let inv=0;inv<tones.length;inv++){
+    const order=tones.slice(inv).concat(tones.slice(0,inv));
+    for(let base=lo;base<lo+12;base++){
+      if(base%12!==order[0])continue;
+      const v=[base]; for(let k=1;k<order.length;k++){let m=v[k-1]+1; while(m%12!==order[k])m++; v.push(m);}
+      if(v[v.length-1]>hi)continue;
+      const ref=lastVoicing||[62,66,69,72];
+      const centre=v.reduce((x,y)=>x+y,0)/v.length, rc=ref.reduce((x,y)=>x+y,0)/ref.length;
+      const score=Math.abs(centre-rc)*2+v.reduce((acc,m)=>acc+Math.min(...ref.map(r=>Math.abs(r-m))),0);
+      if(score<bestScore){bestScore=score;best=v;}
+    }
+  }
+  if(!best){best=tones.map(pc=>{let m=lo+((pc-lo)%12+12)%12;return m;}).sort((x,y)=>x-y);}
+  lastVoicing=best; return best;
+}
+function bassRootI(i){let m=36+chordInfo(state.prog[i]).rootPc; if(m>43)m-=12; return m;}
+function fifthI(i){const I=chordInfo(state.prog[i]); return bassRootI(i)+(I.ints[2]!=null?I.ints[2]:7);}
+function approach(ni){const n=bassRootI(ni); return Math.random()<.5?n-1:n+2;}
+
+function scheduleBar(i,t,melCol,ni,barN){
+  const spb=60/state.bpm, e=spb/2, L=state.layers, st=state.style, B=bassRootI(i), F=fifthI(i);
+  const isLast=ni===0||chordInfo(state.prog[ni]).rootPc!==chordInfo(state.prog[i]).rootPc, A=approach(ni);
+  if(st==="pop"){
+    if(L.chords){const v=voicing(i,55,74);
+      [[0,2.6,.5],[3,1.8,.42],[6,1.9,.46]].forEach(([k,d,vel])=>v.forEach(m=>inst("rhodes",m,t+k*e+hum(),d*e,vr(vel),bus.keys,{wet:.15})));
+      // guitar: light 8th-note arpeggio on top
+      const gv=v.map(m=>m+12).filter(m=>m<=78); [0,1,2,3,4,5,6,7].forEach(k=>inst("guitar",gv[k%gv.length],t+k*e+hum(),e*1.6,vr(.16),bus.keys,{wet:.12,pan:.3}));
+    }
+    if(L.bass){[[0,B,2.6,.95],[3,B,.9,.8],[4,B,1.4,.9],[6,F,.9,.8],[7,isLast?A:B+12,.9,.75]].forEach(([k,m,d,v])=>inst("bass",m,t+k*e+hum(3),d*e,vr(v),bus.bass));}
+    if(L.drums){
+      [0,3,4].forEach(k=>drum("kick",t+k*e,k===0?1:.75)); if(i%2)drum("kick",t+7*e,.6);
+      drum("snare",t+2*e,.8); drum("snare",t+6*e,.85);
+      for(let k=0;k<8;k++){ if(i===N()-1&&k===7){drum("hhhalf",t+k*e,.5);} else drum("hhclosed",t+k*e,k%2?.38:.55); }
+      if(barN%8===7){drum("snare",t+7*e,.55);drum("snare",t+7.5*e,.45);}
+    }
+  } else if(st==="bossa"){
+    if(L.chords){const v=voicing(i,52,72);
+      const hits=(barN%2===0)?[[0,1.4,.5],[3,.9,.42],[5,.9,.42]]:[[1,.9,.42],[3,.9,.42],[6,1.6,.46]];
+      hits.forEach(([k,d,vel])=>v.forEach(m=>inst("guitar",m,t+k*e+hum(),d*e,vr(vel),bus.keys,{wet:.12})));
+      // soft Rhodes pad underneath
+      v.forEach(m=>inst("rhodes",m+12,t,spb*3.6,.18,bus.keys,{wet:.2}));
+    }
+    if(L.bass){[[0,B,2.8,.95],[3,F,.9,.8],[4,F,2.8,.9],[7,isLast?A:B,.9,.8]].forEach(([k,m,d,v])=>inst("bass",m,t+k*e+hum(3),d*e,vr(v),bus.bass));}
+    if(L.drums){
+      const clave=(barN%2===0)?[0,3,6]:[2,4]; clave.forEach(k=>drum("xstick",t+k*e,.6));
+      for(let k=0;k<8;k++)drum("hhclosed",t+k*e,k%2?.25:.4);
+      [0,3,4,7].forEach(k=>drum("kick",t+k*e,k%4===0?.6:.45));
+    }
+  } else if(st==="balada"){
+    if(L.chords){const v=voicing(i,58,76);
+      v.forEach(m=>inst("piano",m,t+hum(8),spb*3.8,vr(.38),bus.keys,{wet:.3,rel:.3}));
+      const seq=[B+12,F+12,B+24,v[0],v[1],v[0],B+24,F+12];
+      [0,1,2,3,4,5,6,7].forEach(k=>inst("piano",seq[k],t+k*e+hum(6),e*2.2,vr(k%4===0?.42:.3),bus.keys,{wet:.3,rel:.25}));
+    }
+    if(L.bass){inst("bass",B,t,spb*3.6,.75,bus.bass); if(isLast)inst("bass",A,t+3.5*spb,e*.9,.6,bus.bass);}
+    if(L.drums){drum("xstick",t+spb,.45);drum("xstick",t+3*spb,.45);[0,1,2,3].forEach(k=>drum("ride",t+k*spb,.22));drum("kick",t,.5);drum("hhpedal",t+spb,.3);drum("hhpedal",t+3*spb,.3);}
+  } else { // acords llargs
+    if(L.chords){const v=voicing(i,55,74); v.forEach(m=>inst("rhodes",m,t+hum(5),spb*3.9,vr(.42),bus.keys,{wet:.28,rel:.25}));}
+    if(L.bass)inst("bass",B,t,spb*3.8,.85,bus.bass);
+    if(L.drums){drum("ride",t,.25);drum("ride",t+2*spb,.2);}
+  }
+  if(L.click){for(let k=0;k<4;k++)click(t+k*spb,k===0);}
+  const vis=[];
+  if(melCol&&melCol.length){
+    const fr=colDurs(i,melCol.slice(0,2)); let off=0;
+    melCol.slice(0,2).forEach((d,k)=>{const f=fr[k]||.5, t0=t+off*spb*4, dur=f*spb*4; off+=f; if(d==null)return; if(L.mel)lead(melMidi(i,d),t0,dur); vis.push({t:t0,d});});
+  }
+  return vis;
+}
+
+
+/* mixer */
+const MIXDEF={mel:100,keys:60,bass:95,drums:75,rev:90,out:95};
+const MIXLBL=[["mel","Melodia"],["keys","Acords"],["bass","Baix"],["drums","Bateria"],["rev","Reverb"],["out","General"]];
+state.mix={...MIXDEF};
+try{const saved=JSON.parse(localStorage.getItem("camins.mix")||"null");if(saved)Object.assign(state.mix,saved);}catch(e){}
+function applyMix(){
+  if(!bus||!ac)return; const t=ac.currentTime;
+  ["mel","keys","bass","drums"].forEach(k=>bus[k].gain.setTargetAtTime(state.mix[k]/100,t,.03));
+  bus.wet.gain.setTargetAtTime(state.mix.rev/100,t,.03); bus.out.gain.setTargetAtTime(state.mix.out/100,t,.03);
+}
+function renderMixer(){
+  $("mixer").innerHTML=MIXLBL.map(([k,l])=>`<label class="mix" for="mx-${k}"><span>${l}</span><input type="range" id="mx-${k}" min="0" max="150" value="${state.mix[k]}"><output for="mx-${k}" id="mo-${k}">${state.mix[k]}</output></label>`).join("");
+  MIXLBL.forEach(([k])=>$("mx-"+k).addEventListener("input",e=>{state.mix[k]=+e.target.value;$("mo-"+k).textContent=state.mix[k];applyMix();try{localStorage.setItem("camins.mix",JSON.stringify(state.mix));}catch(err){}}));
+}
+renderMixer();
+$("mixReset").onclick=()=>{state.mix={...MIXDEF};try{localStorage.removeItem("camins.mix");}catch(e){}renderMixer();applyMix();};
+
+/* ---------- transport: a plan of bars ---------- */
+let timer=null,nextTime=0,barN=0,visQ=[],plan=null;
+function demoPlan(){
+  const n=N(); const levels=state.level==="prog"?[1,2,3,4,5]:[+state.level,+state.level,+state.level,+state.level];
+  const seen=new Set(); const paths=levels.map(lv=>{let p,k,tries=0;do{p=genPath(lv);k=JSON.stringify(p);tries++;}while(seen.has(k)&&tries<40);seen.add(k);return {lv,p};});
+  const bars=[]; const blank=emptyPath();
+  if(n<=4)for(let i=0;i<n;i++)bars.push({col:i,show:blank,banner:"Escolteu la progressió",sub:"Primer, només l'acompanyament"});
+  paths.forEach((x,j)=>{
+    const L=LEVELS.find(l=>l[0]===x.lv);
+    const lbl=`Camí ${j+1} de ${paths.length} · Nivell ${x.lv}: ${L[1]}`;
+    for(let i=0;i<n;i++)bars.push({col:i,mel:x.p[i],show:x.p,banner:lbl,sub:"Escolteu · "+L[2]});
+    if(state.sing)for(let i=0;i<n;i++)bars.push({col:i,mel:null,show:x.p,banner:lbl,sub:"Ara vosaltres: canteu-lo o toqueu-lo"});
+  });
+  return bars;
+}
+function barSpec(k){
+  if(state.mode2==="demo"){ if(k>=plan.length)return null; return plan[k]; }
+  const src=state.hidden||state.path; const i=k%N();
+  return {col:i,mel:src[i],show:null};
+}
+function tick(){
+  while(nextTime<ac.currentTime+.3){
+    const spec=barSpec(barN);
+    if(!spec){visQ.push({t:nextTime,end:true}); clearInterval(timer); timer=null; return;}
+    const v=scheduleBar(spec.col,nextTime,spec.mel,(spec.col+1)%N(),barN);
+    visQ.push({t:nextTime,col:spec.col,show:spec.show,banner:spec.banner,sub:spec.sub});
+    v.forEach(x=>visQ.push({t:x.t,col:spec.col,d:x.d}));
+    visQ.sort((a,b)=>a.t-b.t);
+    nextTime+=60/state.bpm*4; barN++;
+  }
+}
+function draw(){
+  if(!state.playing)return;
+  let changed=false;
+  while(visQ.length&&visQ[0].t<=ac.currentTime){
+    const v=visQ.shift();
+    if(v.end){finishDemo();return;}
+    if(v.d!==undefined){state.cur={col:v.col,d:v.d};}
+    else{state.col=v.col; state.cur=null;
+      if(v.show){state.path=v.show.map(c=>c.slice());}
+      if(v.banner!==undefined){$("banner").textContent=v.banner;$("status").textContent=v.sub||"";}
+    }
+    changed=true;
+  }
+  if(changed)render();
+  requestAnimationFrame(draw);
+}
+async function start(mode){
+  ensureAudio(); ac.resume();
+  if(!real){$("banner").textContent="Carregant sons…"; real=await loadAll();}
+  if(state.playing)stop(true);
+  state.mode2=mode; state.playing=true; barN=0; visQ=[]; lastVoicing=null;
+  if(mode==="demo"){plan=demoPlan();}
+  nextTime=ac.currentTime+.12; timer=setInterval(tick,40); tick(); requestAnimationFrame(draw);
+  $("play").textContent=mode==="free"?"■ Atura":"▶ El meu camí";
+  $("demo").textContent=mode==="demo"?"■ Atura la demostració":"▶ Demostració";
+  if(mode==="free")$("banner").textContent="";
+}
+function stop(silent){
+  state.playing=false; if(timer)clearInterval(timer); timer=null; state.col=-1; state.cur=null;
+  if(bus){const g=bus.out.gain;g.cancelScheduledValues(ac.currentTime);g.setValueAtTime(g.value,ac.currentTime);g.linearRampToValueAtTime(0,ac.currentTime+.08);
+    const old=bus; setTimeout(()=>{try{old.out.disconnect();}catch(e){}},250); makeBus();}
+  state.mode2=null;
+  $("play").textContent="▶ El meu camí"; $("demo").textContent="▶ Demostració";
+  if(!silent){ if(!state.hidden)$("banner").textContent=""; render(); }
+}
+function finishDemo(){stop(true);render();$("banner").textContent="Fi de la demostració";$("status").textContent="Ara proveu de fer el vostre camí a la graella.";}
+$("play").onclick=()=>{if(state.playing&&state.mode2==="free"){stop();return;}state.hidden=null;$("gCheck").disabled=true;start("free");};
+$("demo").onclick=()=>{if(state.playing&&state.mode2==="demo"){stop();return;}state.hidden=null;$("gCheck").disabled=true;start("demo");};
+
+/* example path so the board opens in a working state */
+state.path=[[5],[5],[6],[6]];
+render();
+const mq=window.matchMedia("(prefers-color-scheme: dark)"); if(mq.addEventListener)mq.addEventListener("change",render);
+new MutationObserver(render).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
+})();
+</script>
+
+</body>
+</html>
